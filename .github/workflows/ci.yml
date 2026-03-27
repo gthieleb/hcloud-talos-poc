@@ -1,0 +1,95 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: hcloud-talos-poc-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init and validate
+        run: |
+          for d in modules/hcloud-talos-poc modules/state-and-secrets examples/poc examples/ci-cluster examples/state-bootstrap; do
+            terraform -chdir="$d" init -backend=false
+            terraform -chdir="$d" validate
+          done
+
+      - name: TFLint
+        run: tflint --recursive
+
+  e2e-ci-cluster:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      TFSTATE_BUCKET: ${{ secrets.TFSTATE_BUCKET }}
+      TFSTATE_DYNAMODB_TABLE: ${{ secrets.TFSTATE_DYNAMODB_TABLE }}
+      TFSTATE_BUCKET_REGION: ${{ secrets.TFSTATE_BUCKET_REGION || secrets.AWS_REGION }}
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          required=(TF_VAR_hcloud_token AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION TFSTATE_BUCKET TFSTATE_DYNAMODB_TABLE)
+          for item in "${required[@]}"; do
+            if [ -z "${!item:-}" ]; then
+              echo "Missing required secret/env: $item"
+              exit 1
+            fi
+          done
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Terraform init
+        run: |
+          terraform -chdir=examples/ci-cluster init \
+            -backend-config="bucket=${TFSTATE_BUCKET}" \
+            -backend-config="region=${TFSTATE_BUCKET_REGION}" \
+            -backend-config="dynamodb_table=${TFSTATE_DYNAMODB_TABLE}" \
+            -backend-config="key=ci/example-cluster/terraform.tfstate"
+
+      - name: Terraform apply
+        run: terraform -chdir=examples/ci-cluster apply -auto-approve
+
+      - name: Export kubeconfig
+        run: terraform -chdir=examples/ci-cluster output --raw kubeconfig > "$RUNNER_TEMP/kubeconfig"
+
+      - name: Kubernetes smoke tests
+        env:
+          KUBECONFIG: ${{ runner.temp }}/kubeconfig
+        run: ./scripts/cluster_smoke_test.sh
+
+      - name: Terraform destroy
+        if: always()
+        run: terraform -chdir=examples/ci-cluster destroy -auto-approve

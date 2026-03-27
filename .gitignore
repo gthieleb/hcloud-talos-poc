@@ -1,0 +1,17 @@
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local environment files
+.env
+.env.*
+
+# kube/talos output
+kubeconfig
+talosconfig
