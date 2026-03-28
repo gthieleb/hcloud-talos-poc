@@ -27,11 +27,11 @@ Important modes:
 - `public_endpoint` (uses `cluster_api_host`)
 - `private_endpoint` (uses `cluster_api_host_private`)
 
-For external Argo CD, recommended:
+For external Argo CD with this repository layout, recommended:
 
-- set `cluster_api_host` to stable DNS name
-- set `kubeconfig_endpoint_mode = "public_endpoint"`
-- restrict Kubernetes API firewall (`firewall_kube_api_source`) to Argo CD egress CIDR(s)
+- set `cluster_api_host` to stable DNS name pointing to the gateway public IP
+- expose kube API on gateway (`expose_kube_api_via_gateway = true`)
+- restrict gateway ingress with `gateway_allowed_cidrs`
 
 ## Argo CD cluster secret mapping
 
@@ -43,3 +43,8 @@ Use module output `kubeconfig_data`:
 - `client_key` -> `tlsClientConfig.keyData` (base64 in JSON)
 
 See `docs/argocd-cluster-secret-example.yaml`.
+
+## Note on strict private-only posture
+
+The upstream module still provisions public node IPs. This repository narrows access by fronting APIs with a gateway and private backend targets.
+For `expose=false` operation over VPN/Tailscale/WireGuard, track dedicated validation work in the backlog.

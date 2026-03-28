@@ -6,6 +6,11 @@ talos_version        = "v1.12.2"
 kubernetes_version   = "1.35.0"
 cilium_version       = "1.18.5"
 
-# Recommended for external Argo CD:
-# cluster_api_host         = "kube.example.com"
-# kubeconfig_endpoint_mode = "public_endpoint"
+# Gateway exposure controls (TCP pass-through)
+enable_gateway               = true
+expose_kube_api_via_gateway  = true
+expose_talos_api_via_gateway = true
+gateway_allowed_cidrs        = ["0.0.0.0/0"]
+
+# Optional stable DNS endpoint (recommended for long-lived clusters):
+# cluster_api_host = "kube.example.com"

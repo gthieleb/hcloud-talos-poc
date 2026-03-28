@@ -71,6 +71,9 @@ jobs:
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
 
+      - name: Install netcat
+        run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
+
       - name: Terraform init
         run: |
           terraform -chdir=examples/ci-cluster init \
@@ -81,6 +84,13 @@ jobs:
 
       - name: Terraform apply
         run: terraform -chdir=examples/ci-cluster apply -auto-approve
+
+      - name: Check gateway exposed ports
+        run: |
+          gateway_host="$(terraform -chdir=examples/ci-cluster output -raw gateway_public_ipv4)"
+          kube_exposed="$(terraform -chdir=examples/ci-cluster output -json gateway_exposed_ports | jq -r '.kube_api')"
+          talos_exposed="$(terraform -chdir=examples/ci-cluster output -json gateway_exposed_ports | jq -r '.talos_api')"
+          ./scripts/check_gateway_ports.sh "$gateway_host" "$kube_exposed" "$talos_exposed"
 
       - name: Export kubeconfig
         run: terraform -chdir=examples/ci-cluster output --raw kubeconfig > "$RUNNER_TEMP/kubeconfig"

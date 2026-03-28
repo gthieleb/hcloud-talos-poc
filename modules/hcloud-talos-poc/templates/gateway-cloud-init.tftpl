@@ -1,0 +1,45 @@
+#cloud-config
+package_update: true
+package_upgrade: false
+packages:
+  - haproxy
+
+write_files:
+  - path: /etc/haproxy/haproxy.cfg
+    owner: root:root
+    permissions: "0644"
+    content: |
+      global
+          log /dev/log local0
+          log /dev/log local1 notice
+          daemon
+
+      defaults
+          log global
+          mode tcp
+          option tcplog
+          timeout connect 10s
+          timeout client  1m
+          timeout server  1m
+
+%{ if expose_kube_api ~}
+      frontend kube_api
+          bind *:6443
+          default_backend kube_api_backend
+
+      backend kube_api_backend
+          server kube1 ${kube_private_target}:6443 check
+%{ endif ~}
+
+%{ if expose_talos_api ~}
+      frontend talos_api
+          bind *:50000
+          default_backend talos_api_backend
+
+      backend talos_api_backend
+          server talos1 ${talos_private_target}:50000 check
+%{ endif ~}
+
+runcmd:
+  - systemctl enable haproxy
+  - systemctl restart haproxy

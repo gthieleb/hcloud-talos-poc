@@ -33,14 +33,39 @@ variable "cluster_api_host" {
   default = null
 }
 
+variable "cluster_api_host_private" {
+  type    = string
+  default = null
+}
+
 variable "kubeconfig_endpoint_mode" {
   type    = string
-  default = "public_ip"
+  default = null
 }
 
 variable "talosconfig_endpoints_mode" {
   type    = string
-  default = "public_ip"
+  default = "private_ip"
+}
+
+variable "enable_gateway" {
+  type    = bool
+  default = true
+}
+
+variable "expose_kube_api_via_gateway" {
+  type    = bool
+  default = true
+}
+
+variable "expose_talos_api_via_gateway" {
+  type    = bool
+  default = true
+}
+
+variable "gateway_allowed_cidrs" {
+  type    = list(string)
+  default = ["0.0.0.0/0"]
 }
 
 variable "firewall_use_current_ip" {

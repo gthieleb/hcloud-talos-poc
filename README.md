@@ -8,6 +8,7 @@ This repository includes:
 
 - a wrapper Terraform module for a 3-node control-plane cluster (workload scheduling on control planes enabled)
 - bootstrap of HCCM, Cilium, and Prometheus Operator CRDs
+- a dedicated `cax11` gateway VM with public IP and private NIC to expose Kubernetes API and Talos API as TCP pass-through
 - investigation notes for helm-controller support and Argo CD cluster registration
 - an example CI pipeline that provisions a cluster, runs Kubernetes smoke tests, and tears it down
 - a small Terraform module to provision AWS S3/DynamoDB backend resources and a secret placeholder for CI
@@ -22,6 +23,24 @@ The wrapper module (`modules/hcloud-talos-poc`) sets sane defaults for this POC:
 - `deploy_hcloud_ccm = true`
 - `deploy_cilium = true`
 - `deploy_prometheus_operator_crds = true`
+- `enable_gateway = true`
+- `expose_kube_api_via_gateway = true` (port `6443`)
+- `expose_talos_api_via_gateway = true` (port `50000`)
+
+## Private cluster with gateway exposure
+
+The upstream module supports private endpoint modes, but node public IPs are still created.
+This repository adds a dedicated gateway VM and routes API traffic through it:
+
+- Gateway public port `6443` -> control-plane private VIP `:6443`
+- Gateway public port `50000` -> first control-plane private IP `:50000`
+
+Both exposures are optional and controlled independently:
+
+- `expose_kube_api_via_gateway`
+- `expose_talos_api_via_gateway`
+
+If both are `false`, no gateway listener ports are exposed.
 
 ## helm-controller support investigation
 
@@ -37,8 +56,9 @@ Short answer:
 
 For external Argo CD (public reachability):
 
-- prefer a stable API endpoint with DNS (`cluster_api_host`) and `kubeconfig_endpoint_mode = "public_endpoint"`
-- allow Argo CD egress IP(s) in `firewall_kube_api_source`
+- prefer a stable API endpoint with DNS (`cluster_api_host`) mapped to the gateway public IP
+- use `kubeconfig_endpoint_mode = "public_endpoint"` (auto-selected when gateway kube API exposure is enabled)
+- allow Argo CD egress IP(s) through `gateway_allowed_cidrs`
 - use module output `kubeconfig_data` to create an Argo CD cluster secret
 
 Reference example:
@@ -53,6 +73,7 @@ Reference example:
 - `examples/ci-cluster`: ephemeral CI test stack
 - `.github/workflows/ci.yml`: validation + e2e lifecycle
 - `scripts/cluster_smoke_test.sh`: Kubernetes checks used in CI
+- `scripts/check_gateway_ports.sh`: gateway reachability checks for ports 6443/50000
 
 ## Required CI secrets
 
@@ -80,9 +101,10 @@ terraform -chdir=examples/poc init
 terraform -chdir=examples/poc apply
 ```
 
-4. Export kubeconfig:
+4. Verify gateway outputs and export kubeconfig:
 
 ```bash
+terraform -chdir=examples/poc output gateway_public_ipv4
 terraform -chdir=examples/poc output --raw kubeconfig > ./kubeconfig
 export KUBECONFIG=$PWD/kubeconfig
 kubectl get nodes

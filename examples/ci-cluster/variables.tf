@@ -27,3 +27,23 @@ variable "cilium_version" {
   type    = string
   default = "1.18.5"
 }
+
+variable "enable_gateway" {
+  type    = bool
+  default = true
+}
+
+variable "expose_kube_api_via_gateway" {
+  type    = bool
+  default = true
+}
+
+variable "expose_talos_api_via_gateway" {
+  type    = bool
+  default = true
+}
+
+variable "gateway_allowed_cidrs" {
+  type    = list(string)
+  default = ["0.0.0.0/0"]
+}

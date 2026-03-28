@@ -11,6 +11,12 @@ module "cluster" {
   cluster_api_host           = var.cluster_api_host
   kubeconfig_endpoint_mode   = var.kubeconfig_endpoint_mode
   talosconfig_endpoints_mode = var.talosconfig_endpoints_mode
+  cluster_api_host_private   = var.cluster_api_host_private
+
+  enable_gateway               = var.enable_gateway
+  expose_kube_api_via_gateway  = var.expose_kube_api_via_gateway
+  expose_talos_api_via_gateway = var.expose_talos_api_via_gateway
+  gateway_allowed_cidrs        = var.gateway_allowed_cidrs
 
   firewall_use_current_ip   = var.firewall_use_current_ip
   firewall_kube_api_source  = var.firewall_kube_api_source

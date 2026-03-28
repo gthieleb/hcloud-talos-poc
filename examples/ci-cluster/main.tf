@@ -8,6 +8,11 @@ module "cluster" {
   kubernetes_version = var.kubernetes_version
   cilium_version     = var.cilium_version
 
+  enable_gateway               = var.enable_gateway
+  expose_kube_api_via_gateway  = var.expose_kube_api_via_gateway
+  expose_talos_api_via_gateway = var.expose_talos_api_via_gateway
+  gateway_allowed_cidrs        = var.gateway_allowed_cidrs
+
   firewall_use_current_ip      = true
   control_plane_allow_schedule = true
 

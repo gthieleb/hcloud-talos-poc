@@ -83,16 +83,88 @@ variable "cluster_api_host" {
   default     = null
 }
 
-variable "kubeconfig_endpoint_mode" {
-  description = "Kubeconfig endpoint mode. Use public_endpoint when cluster_api_host is set."
+variable "cluster_api_host_private" {
+  description = "Optional stable private DNS hostname for Kubernetes API endpoint."
   type        = string
-  default     = "public_ip"
+  default     = null
+}
+
+variable "kubeconfig_endpoint_mode" {
+  description = "Kubeconfig endpoint mode override. If null, auto-selects public_endpoint when gateway kube API exposure is enabled, otherwise private_ip."
+  type        = string
+  default     = null
 }
 
 variable "talosconfig_endpoints_mode" {
   description = "Talos API endpoint selection for talosconfig."
   type        = string
-  default     = "public_ip"
+  default     = "private_ip"
+}
+
+variable "network_ipv4_cidr" {
+  description = "Cluster network IPv4 CIDR."
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "node_ipv4_cidr" {
+  description = "Node subnet IPv4 CIDR."
+  type        = string
+  default     = "10.0.1.0/24"
+}
+
+variable "pod_ipv4_cidr" {
+  description = "Pod network IPv4 CIDR."
+  type        = string
+  default     = "10.0.16.0/20"
+}
+
+variable "service_ipv4_cidr" {
+  description = "Service network IPv4 CIDR."
+  type        = string
+  default     = "10.0.8.0/21"
+}
+
+variable "enable_gateway" {
+  description = "Create a dedicated gateway VM with public IP and private NIC."
+  type        = bool
+  default     = true
+}
+
+variable "gateway_server_type" {
+  description = "Hetzner server type for the gateway."
+  type        = string
+  default     = "cax11"
+}
+
+variable "gateway_image" {
+  description = "OS image for the gateway VM."
+  type        = string
+  default     = "debian-13"
+}
+
+variable "gateway_private_ip" {
+  description = "Optional fixed private IP for the gateway in node subnet."
+  type        = string
+  default     = null
+}
+
+variable "gateway_allowed_cidrs" {
+  description = "Source CIDRs allowed to reach gateway exposed ports."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "expose_kube_api_via_gateway" {
+  description = "Expose Kubernetes API (6443) on gateway."
+  type        = bool
+  default     = true
+}
+
+variable "expose_talos_api_via_gateway" {
+  description = "Expose Talos API (50000) on gateway."
+  type        = bool
+  default     = true
 }
 
 variable "deploy_hcloud_ccm" {
